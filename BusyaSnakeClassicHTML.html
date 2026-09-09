@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Busya Snake Classic</title>
+    <style>
+        :root {
+            /* Light theme variables (default) */
+            --bg-color: #ffffff;
+            --fg-color: #000000;
+            --shadow-color: #000000;
+            --overlay-bg: rgba(255, 255, 255, 0.9);
+            --watermark-color: rgba(0, 0, 0, 0.04);
+        }
+
+        [data-theme="dark"] {
+            /* Dark theme variables */
+            --bg-color: #000000;
+            --fg-color: #ffffff;
+            --shadow-color: #ffffff;
+            --overlay-bg: rgba(0, 0, 0, 0.9);
+            --watermark-color: rgba(255, 255, 255, 0.05);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Press Start 2P', 'VT323', 'Silkscreen', 'Courier New', Courier, monospace;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--fg-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+            padding-bottom: 120px;
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        /* Полностью локальный водяной знак без SVG */
+        .watermark-bg {
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            z-index: -1;
+            pointer-events: none;
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            overflow: hidden;
+            transform: rotate(-15deg);
+            color: var(--watermark-color);
+            font-size: 24px;
+            font-weight: bold;
+            line-height: 2;
+            word-spacing: 20px;
+        }
+
+        .top-bar {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            z-index: 10;
+        }
+
+        .sys-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-weight: bold;
+            font-size: 14px;
+            text-align: center;
+            background-color: var(--bg-color);
+            border: 2px solid var(--fg-color);
+            padding: 5px 10px;
+            box-shadow: 2px 2px 0 var(--shadow-color);
+        }
+
+        .sys-btn {
+            background-color: var(--bg-color);
+            color: var(--fg-color);
+            border: 2px solid var(--fg-color);
+            padding: 5px 10px;
+            font-weight: bold;
+            font-size: 12px;
+            cursor: pointer;
+            outline: none;
+            box-shadow: 2px 2px 0 var(--shadow-color);
+            text-transform: uppercase;
+        }
+
+        .sys-btn:hover {
+            background-color: var(--fg-color);
+            color: var(--bg-color);
+        }
+
+        .sys-btn:active {
+            box-shadow: 0 0 0 var(--shadow-color);
+            transform: translate(2px, 2px);
+        }
+
+        select.sys-btn {
+            appearance: none;
+            border-radius: 0;
+        }
+
+        .device {
+            background-color: var(--bg-color);
+            border: 4px solid var(--fg-color);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 8px 8px 0px var(--shadow-color);
+            max-width: 400px;
+            width: 95%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 60px; /* Отступ для верхней панели */
+        }
+
+        .game-title {
+            font-size: 24px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            text-align: center;
+            letter-spacing: 2px;
+        }
+
+        .screen-border {
+            border: 4px solid var(--fg-color);
+            padding: 5px;
+            width: 100%;
+            background-color: var(--bg-color);
+            margin-bottom: 15px;
+            position: relative;
+        }
+
+        .header-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 14px;
+            border-bottom: 2px solid var(--fg-color);
+            padding-bottom: 5px;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            background-color: var(--bg-color);
+            image-rendering: pixelated;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 35px;
+            left: 5px;
+            right: 5px;
+            bottom: 5px;
+            background-color: var(--overlay-bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            z-index: 5;
+        }
+
+        .overlay-text {
+            font-size: 22px;
+            font-weight: bold;
+            border: 2px solid var(--fg-color);
+            padding: 10px;
+            background: var(--bg-color);
+            color: var(--fg-color);
+            box-shadow: 4px 4px 0 var(--shadow-color);
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+
+        .overlay-text:active {
+            box-shadow: 0px 0px 0 var(--shadow-color);
+            transform: translate(4px, 4px);
+        }
+        
+        .overlay.hidden { display: none; }
+
+        .settings-row {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .d-pad-row {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            width: 100%;
+        }
+
+        .btn {
+            width: 60px;
+            height: 60px;
+            background-color: var(--bg-color);
+            color: var(--fg-color);
+            border: 3px solid var(--fg-color);
+            border-radius: 50%;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 4px 4px 0 var(--shadow-color);
+            transition: all 0.1s;
+        }
+        
+        .btn:active, .btn.active {
+            box-shadow: 0px 0px 0 var(--shadow-color);
+            transform: translate(4px, 4px);
+            background-color: var(--fg-color);
+            color: var(--bg-color);
+        }
+
+        @media (max-width: 400px) {
+            .btn { width: 50px; height: 50px; }
+            .game-title { font-size: 20px; }
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 10px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 13px;
+            font-weight: bold;
+            background-color: var(--overlay-bg);
+            padding: 10px 5px;
+            z-index: 10;
+            border-top: 3px dashed var(--fg-color);
+            border-bottom: 3px dashed var(--fg-color);
+        }
+
+        .footer-text {
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .footer a {
+            color: var(--fg-color);
+            text-decoration: none;
+            border-bottom: 2px solid var(--fg-color);
+            word-break: break-all;
+            padding: 2px 4px;
+            transition: all 0.1s;
+            display: inline-block;
+        }
+
+        .footer a:hover {
+            background-color: var(--fg-color);
+            color: var(--bg-color);
+        }
+
+        .dl-btn {
+            margin-top: 10px;
+            background-color: var(--bg-color);
+            color: var(--fg-color);
+            border: 2px solid var(--fg-color);
+            padding: 6px 15px;
+            font-size: 12px;
+            font-weight: bold;
+            font-family: inherit;
+            cursor: pointer;
+            box-shadow: 2px 2px 0 var(--shadow-color);
+            transition: all 0.1s;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+
+        .dl-btn:active {
+            box-shadow: 0px 0px 0 var(--shadow-color);
+            transform: translate(2px, 2px);
+        }
+
+        .dl-btn:hover {
+            background-color: var(--fg-color);
+            color: var(--bg-color);
+        }
+    </style>
+</head>
+<body data-theme="light">
+
+    <!-- Полностью локальный водяной знак -->
+    <div id="watermark-container" class="watermark-bg"></div>
+
+    <div class="top-bar">
+        <button id="theme-btn" class="sys-btn">THEME ☼</button>
+        
+        <div class="sys-info">
+            <div id="sys-time">00:00:00</div>
+            <div id="sys-battery" style="margin-top: 5px; font-size: 10px;">BAT: --%</div>
+        </div>
+
+        <select id="lang-select" class="sys-btn">
+            <option value="en" selected>English (classic)</option>
+            <option value="ru">Русский</option>
+        </select>
+    </div>
+
+    <div class="device">
+        <div class="game-title" id="ui-title">BUSYA SNAKE</div>
+        
+        <div class="screen-border">
+            <div class="header-stats">
+                <div><span id="ui-score">SCORE</span>: <span id="score-val">0</span></div>
+                <div><span id="ui-best">BEST</span>: <span id="best-val">0</span></div>
+            </div>
+            
+            <canvas id="game-canvas" width="400" height="400"></canvas>
+            
+            <div id="game-overlay" class="overlay">
+                <div id="overlay-action" class="overlay-text">START GAME</div>
+            </div>
+        </div>
+
+        <!-- Кнопки настроек звука и вибрации -->
+        <div class="settings-row">
+            <button id="snd-btn" class="sys-btn">SOUND: ON</button>
+        </div>
+
+        <div class="controls">
+            <button class="btn" id="btn-up" data-dir="UP">▲</button>
+            <div class="d-pad-row">
+                <button class="btn" id="btn-left" data-dir="LEFT">◀</button>
+                <button class="btn" id="btn-down" data-dir="DOWN">▼</button>
+                <button class="btn" id="btn-right" data-dir="RIGHT">▶</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="footer-text" id="ui-footer-text">МОЙ ПРОЕКТ НА GITHUB -</div>
+        <a href="https://github.com/berestnevnikolaj671-kot/Busya-snake-classic" target="_blank">https://github.com/berestnevnikolaj671-kot/Busya-snake-classic</a>
+        <div>
+            <button class="dl-btn" id="dl-btn">DOWNLOAD HTML</button>
+        </div>
+    </div>
+
+    <script>
+        // --- Локализации ---
+        const i18n = {
+            en: {
+                title: "BUSYA SNAKE", score: "SCORE", best: "BEST",
+                start: "START GAME", gameover: "GAME OVER", playagain: "PLAY AGAIN",
+                footer: "MY GITHUB PROJECT -", download: "DOWNLOAD HTML",
+                theme: "THEME", soundOn: "SOUND: ON", soundOff: "SOUND: OFF",
+                bat: "BAT"
+            },
+            ru: {
+                title: "ЗМЕЙКА BUSYA", score: "СЧЕТ", best: "ЛУЧШИЙ",
+                start: "НАЧАТЬ ИГРУ", gameover: "ИГРА ОКОНЧЕНА", playagain: "ИГРАТЬ СНОВА",
+                footer: "МОЙ ПРОЕКТ НА GITHUB -", download: "СКАЧАТЬ HTML",
+                theme: "ТЕМА", soundOn: "ЗВУК: ВКЛ", soundOff: "ЗВУК: ВЫКЛ",
+                bat: "БАТ"
+            }
+        };
+
+        // --- Переменные и элементы ---
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const overlay = document.getElementById('game-overlay');
+        const overlayAction = document.getElementById('overlay-action');
+        const scoreEl = document.getElementById('score-val');
+        const bestEl = document.getElementById('best-val');
+        const langSelect = document.getElementById('lang-select');
+        const dlBtn = document.getElementById('dl-btn');
+        const themeBtn = document.getElementById('theme-btn');
+        const sndBtn = document.getElementById('snd-btn');
+        const clockEl = document.getElementById('sys-time');
+        const batteryEl = document.getElementById('sys-battery');
+
+        let currentLang = 'en';
+        let soundEnabled = true;
+        let currentBatteryPercent = '--';
+
+        // --- Генерация водяного знака локально ---
+        const wm = document.getElementById('watermark-container');
+        let wmText = '';
+        for(let i=0; i<300; i++) wmText += 'By BusyaTM ';
+        wm.textContent = wmText;
+
+        // --- Управление Темой ---
+        function updateThemeIcon() {
+            const isDark = document.body.getAttribute('data-theme') === 'dark';
+            const text = i18n[currentLang].theme;
+            themeBtn.textContent = `${text} ${isDark ? '☾' : '☼'}`;
+            draw(); // Перерисовать канвас в новых цветах
+        }
+
+        themeBtn.addEventListener('click', () => {
+            const isDark = document.body.getAttribute('data-theme') === 'dark';
+            document.body.setAttribute('data-theme', isDark ? 'light' : 'dark');
+            updateThemeIcon();
+        });
+
+        // Получение цветов для отрисовки
+        function getColors() {
+            const isDark = document.body.getAttribute('data-theme') === 'dark';
+            return {
+                bg: isDark ? '#000000' : '#ffffff',
+                fg: isDark ? '#ffffff' : '#000000'
+            };
+        }
+
+        // --- Часы и Батарея ---
+        function updateClock() {
+            const d = new Date();
+            const timeStr = [d.getHours(), d.getMinutes(), d.getSeconds()]
+                .map(n => n.toString().padStart(2, '0')).join(':');
+            clockEl.textContent = timeStr;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        function updateBatteryUI() {
+            if (batteryEl.style.display !== 'none') {
+                batteryEl.textContent = `${i18n[currentLang].bat}: ${currentBatteryPercent}%`;
+            }
+        }
+
+        if (navigator.getBattery) {
+            navigator.getBattery().then(batt => {
+                const updateBatt = () => {
+                    currentBatteryPercent = Math.round(batt.level * 100);
+                    updateBatteryUI();
+                };
+                updateBatt();
+                batt.addEventListener('levelchange', updateBatt);
+            });
+        } else {
+            batteryEl.style.display = 'none'; // Скрыть, если API не поддерживается (например, на iOS)
+        }
+
+        // --- STREAMING_CHUNK:Audio and Vibration Engine... ---
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playTone(freq, type, duration, vol=0.1) {
+            if (!soundEnabled) return;
+            initAudio();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            
+            gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        sndBtn.addEventListener('click', () => {
+            soundEnabled = !soundEnabled;
+            updateButtonsUI();
+            initAudio();
+        });
+
+        // --- Язык интерфейса ---
+        function updateButtonsUI() {
+            const t = i18n[currentLang];
+            sndBtn.textContent = soundEnabled ? t.soundOn : t.soundOff;
+            updateThemeIcon();
+        }
+
+        function updateLanguage() {
+            currentLang = langSelect.value;
+            const t = i18n[currentLang];
+            
+            document.getElementById('ui-title').textContent = t.title;
+            document.getElementById('ui-score').textContent = t.score;
+            document.getElementById('ui-best').textContent = t.best;
+            document.getElementById('ui-footer-text').textContent = t.footer;
+            document.getElementById('dl-btn').textContent = t.download;
+            
+            if (gameState === 'MENU') {
+                overlayAction.textContent = t.start;
+            } else if (gameState === 'GAMEOVER') {
+                overlayAction.innerHTML = `${t.gameover}<br><br>${t.playagain}`;
+            }
+            updateButtonsUI();
+            updateBatteryUI();
+        }
+
+        langSelect.addEventListener('change', updateLanguage);
+
+        // --- STREAMING_CHUNK:Game Logic Engine... ---
+        const GRID_SIZE = 20;
+        const TILE_COUNT = canvas.width / GRID_SIZE;
+        const GAME_SPEED = 120; // ms
+
+        let snake = [];
+        let food = { x: 0, y: 0 };
+        let dx = 0, dy = 0;
+        let score = 0;
+        let bestScore = localStorage.getItem('busya_best') || 0;
+        let gameLoopTimeout;
+        let gameState = 'MENU'; 
+        let nextDx = 0, nextDy = 0;
+
+        bestEl.textContent = bestScore;
+
+        function initGame() {
+            initAudio();
+            playTone(400, 'square', 0.1); 
+            setTimeout(() => playTone(600, 'square', 0.2), 100);
+
+            snake = [
+                { x: 10, y: 10 },
+                { x: 10, y: 11 },
+                { x: 10, y: 12 }
+            ];
+            dx = 0; dy = -1;
+            nextDx = 0; nextDy = -1;
+            score = 0;
+            scoreEl.textContent = score;
+            
+            spawnFood();
+            
+            gameState = 'PLAYING';
+            overlay.classList.add('hidden');
+            
+            clearTimeout(gameLoopTimeout);
+            gameLoop();
+        }
+
+        function spawnFood() {
+            let valid = false;
+            while (!valid) {
+                food.x = Math.floor(Math.random() * TILE_COUNT);
+                food.y = Math.floor(Math.random() * TILE_COUNT);
+                valid = true;
+                for (let part of snake) {
+                    if (part.x === food.x && part.y === food.y) {
+                        valid = false;
+                        break;
+                    }
+                }
+            }
+        }
+
+        function gameLoop() {
+            if (gameState !== 'PLAYING') return;
+            update();
+            draw();
+            if (gameState === 'PLAYING') {
+                gameLoopTimeout = setTimeout(gameLoop, GAME_SPEED);
+            }
+        }
+
+        function update() {
+            dx = nextDx; dy = nextDy;
+            const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+
+            // Коллизия со стенами
+            if (head.x < 0 || head.x >= TILE_COUNT || head.y < 0 || head.y >= TILE_COUNT) {
+                return gameOver();
+            }
+
+            // Коллизия с собой
+            for (let part of snake) {
+                if (head.x === part.x && head.y === part.y) {
+                    return gameOver();
+                }
+            }
+
+            snake.unshift(head); 
+
+            // Сбор еды
+            if (head.x === food.x && head.y === food.y) {
+                score++;
+                scoreEl.textContent = score;
+                playTone(800, 'square', 0.1); // Звук сбора
+                
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestEl.textContent = bestScore;
+                    localStorage.setItem('busya_best', bestScore);
+                }
+                spawnFood();
+            } else {
+                snake.pop(); 
+            }
+        }
+
+        function draw() {
+            const colors = getColors();
+
+            // Фон
+            ctx.fillStyle = colors.bg;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Отрисовка еды (Busya)
+            ctx.fillStyle = colors.fg;
+            const fX = food.x * GRID_SIZE;
+            const fY = food.y * GRID_SIZE;
+            ctx.fillRect(fX + 2, fY + 2, GRID_SIZE - 4, GRID_SIZE - 4);
+            ctx.fillStyle = colors.bg;
+            ctx.fillRect(fX + 6, fY + 6, GRID_SIZE - 12, GRID_SIZE - 12);
+
+            // Отрисовка змеи
+            ctx.fillStyle = colors.fg;
+            for (let i = 0; i < snake.length; i++) {
+                const part = snake[i];
+                ctx.fillRect(part.x * GRID_SIZE + 1, part.y * GRID_SIZE + 1, GRID_SIZE - 2, GRID_SIZE - 2);
+            }
+        }
+
+        function gameOver() {
+            gameState = 'GAMEOVER';
+            playTone(300, 'sawtooth', 0.3);
+            setTimeout(() => playTone(200, 'sawtooth', 0.4), 200);
+
+            const t = i18n[currentLang];
+            overlayAction.innerHTML = `${t.gameover}<br><br>${t.playagain}`;
+            overlay.classList.remove('hidden');
+        }
+
+        overlayAction.addEventListener('click', initGame);
+
+        // --- Управление ---
+        function handleInput(direction) {
+            initAudio(); // Гарантируем звук после любого клика
+            if (gameState !== 'PLAYING') return;
+            if (direction === 'UP' && dy !== 1) { nextDx = 0; nextDy = -1; }
+            if (direction === 'DOWN' && dy !== -1) { nextDx = 0; nextDy = 1; }
+            if (direction === 'LEFT' && dx !== 1) { nextDx = -1; nextDy = 0; }
+            if (direction === 'RIGHT' && dx !== -1) { nextDx = 1; nextDy = 0; }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].indexOf(e.code) > -1) {
+                e.preventDefault();
+            }
+            if (gameState !== 'PLAYING' && e.code === 'Space') {
+                initGame();
+                return;
+            }
+            switch(e.key) {
+                case 'ArrowUp': case 'w': case 'W': handleInput('UP'); break;
+                case 'ArrowDown': case 's': case 'S': handleInput('DOWN'); break;
+                case 'ArrowLeft': case 'a': case 'A': handleInput('LEFT'); break;
+                case 'ArrowRight': case 'd': case 'D': handleInput('RIGHT'); break;
+            }
+        });
+
+        const controlBtns = document.querySelectorAll('.btn');
+        controlBtns.forEach(btn => {
+            const dir = btn.getAttribute('data-dir');
+            const trigger = (e) => {
+                e.preventDefault();
+                handleInput(dir);
+                btn.classList.add('active');
+                setTimeout(() => btn.classList.remove('active'), 100);
+            };
+            btn.addEventListener('touchstart', trigger, {passive: false});
+            btn.addEventListener('mousedown', trigger, {passive: false});
+        });
+
+        // --- Скачивание локальной версии ---
+        dlBtn.addEventListener('click', () => {
+            const clone = document.documentElement.cloneNode(true);
+            const overlayClone = clone.querySelector('#game-overlay');
+            if(overlayClone) overlayClone.classList.remove('hidden');
+            const scoreClone = clone.querySelector('#score-val');
+            if(scoreClone) scoreClone.textContent = '0';
+            
+            const htmlContent = '<!DOCTYPE html>\n' + clone.outerHTML;
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'Busya_Snake_Classic.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        // --- Инициализация при старте ---
+        overlay.classList.remove('hidden');
+        scoreEl.textContent = '0';
+        updateLanguage();
+        draw(); 
+        
+    </script>
+</body>
+</html>
